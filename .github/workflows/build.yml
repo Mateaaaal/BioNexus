@@ -30,6 +30,7 @@ jobs:
         --noconsole 
         --onefile 
         --windowed 
+        --icon="logo.ico"
         --add-data "logo.png;." 
         main.py
 
