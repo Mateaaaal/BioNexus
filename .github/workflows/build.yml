@@ -1,0 +1,40 @@
+name: Build BioNexus EXE
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+    - name: 1. Récupérer le code
+      uses: actions/checkout@v4
+
+    - name: 2. Installer Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: 3. Installer les librairies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+
+    - name: 4. Compiler le .exe
+      run: >
+        pyinstaller 
+        --name "BioNexus" 
+        --noconsole 
+        --onefile 
+        --windowed 
+        --add-data "logo.png;." 
+        main.py
+
+    - name: 5. Mettre le .exe à disposition
+      uses: actions/upload-artifact@v4
+      with:
+        name: BioNexus-Studio-Windows
+        path: dist/
