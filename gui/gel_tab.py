@@ -18,6 +18,7 @@ from core.band_detector import BandDetector
 from core.markers import Markers, CustomMarkerDialog
 from gui.crop_dialog import CropDialog
 from gui.calibration_dialog import CalibrationDialog
+from utils.density import calculate_lane_density
 
 
 class GelTab(QWidget):
@@ -521,3 +522,30 @@ class GelTab(QWidget):
         if file_path:
             self.canvas.fig.savefig(file_path, dpi=300, bbox_inches='tight')
             QMessageBox.information(self, "Export Successful", f"File successfully saved to:\n{file_path}")
+
+    def plot_density_profile(self, lane_crop: np.ndarray):
+        """Update the Matplotlib canvas with the lane intensity profile."""
+        profile, peaks, percentages = calculate_lane_density(lane_crop)
+
+        self.density_ax.clear()
+        self.density_ax.plot(profile, color="#1f77b4", label="Intensity Profile")
+
+        if len(peaks) > 0:
+            self.density_ax.plot(peaks, profile[peaks], "ro", label="Bands")
+
+            for peak, pct in zip(peaks, percentages):
+                self.density_ax.annotate(
+                    f"{pct:.1f}%",
+                    (peak, profile[peak]),
+                    textcoords="offset points",
+                    xytext=(0, 8),
+                    ha="center",
+                    fontsize=8,
+                    weight="bold",
+                )
+
+        self.density_ax.set_ylabel("Intensity (a.u.)")
+        self.density_ax.set_xlabel("Migration Distance (px)")
+        self.density_ax.set_title("Densitometry Profile")
+        self.density_ax.grid(True, linestyle="--", alpha=0.5)
+        self.density_canvas.draw()
