@@ -1,12 +1,15 @@
-name: Build BioNexus EXE
+name: Build BioNexus
 
 on:
   push:
     branches: [ "main" ]
 
 jobs:
-  build-windows:
-    runs-on: windows-latest
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
 
     steps:
     - name: 1. Récupérer le code
@@ -24,10 +27,11 @@ jobs:
         pip install -r requirements.txt
         pip install pyinstaller
 
-    - name: 4. Compiler le .exe
+    - name: 4. Compiler pour Windows
+      if: matrix.os == 'windows-latest'
       run: >
         pyinstaller 
-        --name "BioNexus Studio" 
+        --name "BioNexus" 
         --noconsole 
         --onefile 
         --windowed 
@@ -35,8 +39,27 @@ jobs:
         --add-data "logo.png;." 
         main.py
 
-    - name: 5. Mettre le .exe à disposition
+    - name: 4. Compiler pour Mac
+      if: matrix.os == 'macos-latest'
+      run: >
+        pyinstaller 
+        --name "BioNexus" 
+        --noconsole 
+        --onefile 
+        --windowed 
+        --add-data "logo.png:." 
+        main.py
+
+    - name: 5. Mettre à disposition la version Windows
+      if: matrix.os == 'windows-latest'
       uses: actions/upload-artifact@v4
       with:
         name: BioNexus-Windows
+        path: dist/
+
+    - name: 5. Mettre à disposition la version Mac
+      if: matrix.os == 'macos-latest'
+      uses: actions/upload-artifact@v4
+      with:
+        name: BioNexus-Mac
         path: dist/
