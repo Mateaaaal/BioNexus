@@ -31,7 +31,7 @@ class GelCanvas(FigureCanvasQTAgg):
         click_x = event.xdata
         click_y = event.ydata
 
-        tolerance_x = 15.0
+        tolerance_x = 20.0  # Hitbox élargie pour attraper le puits facilement
         tolerance_y = 5.0
 
         closest_lane_idx = None
@@ -51,16 +51,17 @@ class GelCanvas(FigureCanvasQTAgg):
         if lane_key not in self.raw_bands:
             self.raw_bands[lane_key] = []
 
-        # Update active selection and broadcast signal
+        # On illumine le puits cliqué (il devient cyan)
         self.active_lane_x = lane_key
         self.lane_clicked.emit(lane_key)
 
-        if event.button == 1 and click_y < 0:
-            if getattr(event, "dblclick", False):
-                self.rename_requested.emit(lane_key)
-                return
-            else:
-                self.selected_lane_idx = closest_lane_idx
+        if event.button == 1:
+            # Hitbox plus tolérante : on capte le clic même un peu en dessous du badge
+            if click_y < 50:
+                if getattr(event, "dblclick", False):
+                    self.rename_requested.emit(lane_key)
+                else:
+                    self.selected_lane_idx = closest_lane_idx
 
         elif event.button == 3:
             img_height = self.current_image.shape[0]
@@ -83,7 +84,7 @@ class GelCanvas(FigureCanvasQTAgg):
 
             self.bands_modified.emit()
             
-        self.draw()  # Force redraw to show highlight
+        self.draw()
 
     def on_motion(self, event):
         if event.xdata is None or self.selected_lane_idx is None:
@@ -105,7 +106,6 @@ class GelCanvas(FigureCanvasQTAgg):
 
         self.lanes[self.selected_lane_idx] = new_lane_x
         
-        # Track active lane translation
         if self.active_lane_x == old_lane_x:
             self.active_lane_x = new_lane_x
 
@@ -115,7 +115,6 @@ class GelCanvas(FigureCanvasQTAgg):
                 rebuilt_bands[new_lane_x] = v
             else:
                 rebuilt_bands[k] = v
-
         self.raw_bands.clear()
         self.raw_bands.update(rebuilt_bands)
 
@@ -125,14 +124,23 @@ class GelCanvas(FigureCanvasQTAgg):
                 rebuilt_names[new_lane_x] = v
             else:
                 rebuilt_names[k] = v
-
         self.lane_names.clear()
         self.lane_names.update(rebuilt_names)
 
-        self.bands_modified.emit()
+        # On rafraîchit uniquement le visuel, sans lancer les lourds calculs de BioNexus
+        self.plot_gel(
+            self.current_image, 
+            self.lanes, 
+            self.raw_bands, 
+            self.annotated_bands, 
+            self.lane_names, 
+            self.marker_lane_x
+        )
 
     def on_release(self, event):
-        self.selected_lane_idx = None
+        if self.selected_lane_idx is not None:
+            self.selected_lane_idx = None
+            self.bands_modified.emit() 
 
     def plot_gel(self, image, lanes, raw_bands, annotated_bands, lane_names, marker_lane_x):
         self.lanes = lanes
@@ -236,5 +244,4 @@ class GelCanvas(FigureCanvasQTAgg):
         self.ax.set_xticks([])
         self.ax.set_yticks([])
 
-        self.fig.tight_layout()
         self.draw()
