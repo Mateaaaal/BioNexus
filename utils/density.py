@@ -1,32 +1,29 @@
 import numpy as np
 from scipy.signal import find_peaks
+from scipy.ndimage import gaussian_filter1d
 
 def calculate_lane_density(
     lane_crop: np.ndarray,
+    known_peaks: list[int] = None,
     distance_threshold: int = 15,
-    prominence: float = 10.0,
-) -> tuple[np.ndarray, np.ndarray, list[float]]:
+    prominence: float = 0.05,
+    sigma: float = 2.0
+) -> tuple[np.ndarray, list[int], list[float]]:
     """
-    Extracts a 1D intensity profile and calculates relative peak area percentages.
-
-    Args:
-        lane_crop: 2D grayscale image array of the lane.
-        distance_threshold: Minimum pixel distance between detected peaks.
-        prominence: Minimum peak prominence for detection.
-
-    Returns:
-        profile: 1D intensity array (inverted and baseline-corrected).
-        peaks: Indices of detected peak centers.
-        percentages: Relative area percentages for each detected band.
+    Extracts a smoothed 1D intensity profile and calculates relative peak area percentages.
+    Uses predefined peaks if provided, otherwise detects them automatically.
     """
-    profile_raw = np.mean(lane_crop, axis=1)
-
-    profile = 255.0 - profile_raw
+    profile = np.mean(lane_crop, axis=1)
+    profile = gaussian_filter1d(profile, sigma=sigma)
     profile = profile - np.min(profile)
 
-    peaks, _ = find_peaks(
-        profile, distance=distance_threshold, prominence=prominence
-    )
+    # Use the already validated bands from the GUI if they exist
+    if known_peaks is not None and len(known_peaks) > 0:
+        peaks = sorted(known_peaks)
+    else:
+        peaks, _ = find_peaks(
+            profile, distance=distance_threshold, prominence=prominence
+        )
 
     if len(peaks) == 0:
         return profile, peaks, []
@@ -37,7 +34,7 @@ def calculate_lane_density(
     for peak in peaks:
         start = max(0, peak - half_width)
         end = min(len(profile), peak + half_width)
-        area = np.trapz(profile[start:end])
+        area = np.trapezoid(profile[start:end])
         band_areas.append(area)
 
     total_area = sum(band_areas) if sum(band_areas) > 0 else 1.0

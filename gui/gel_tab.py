@@ -595,5 +595,10 @@ class GelTab(QWidget):
             return
 
         lane_name = self.lane_names.get(self.active_lane_x, "Unknown")
-        dialog = DensitometryDialog(lane_crop, lane_name, parent=self)
+        
+        # Extract exact pixel coordinates from already validated visual bands
+        bands_data = self.annotated_bands.get(self.active_lane_x, [])
+        known_peaks = [int(band[0]) for band in bands_data]
+
+        dialog = DensitometryDialog(lane_crop, lane_name, known_peaks, parent=self)
         dialog.exec()
