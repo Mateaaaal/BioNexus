@@ -9,7 +9,7 @@ from PyQt6.QtCore import pyqtSignal
 class GelCanvas(FigureCanvasQTAgg):
     bands_modified = pyqtSignal()
     rename_requested = pyqtSignal(int)
-    lane_clicked = pyqtSignal(int)  # New signal to transmit lane selection
+    lane_clicked = pyqtSignal(int)
 
     def __init__(self, parent=None):
         self.fig = Figure()
@@ -17,7 +17,7 @@ class GelCanvas(FigureCanvasQTAgg):
         super().__init__(self.fig)
 
         self.selected_lane_idx = None
-        self.active_lane_x = None  # Tracks persistently selected lane
+        self.active_lane_x = None
         self.lanes = []
         
         self.mpl_connect("button_press_event", self.on_press)
@@ -31,7 +31,7 @@ class GelCanvas(FigureCanvasQTAgg):
         click_x = event.xdata
         click_y = event.ydata
 
-        tolerance_x = 20.0  # Hitbox élargie pour attraper le puits facilement
+        tolerance_x = 20.0
         tolerance_y = 5.0
 
         closest_lane_idx = None
@@ -51,12 +51,12 @@ class GelCanvas(FigureCanvasQTAgg):
         if lane_key not in self.raw_bands:
             self.raw_bands[lane_key] = []
 
-        # On illumine le puits cliqué (il devient cyan)
+        # Highlight active lane for densitometry processing
         self.active_lane_x = lane_key
         self.lane_clicked.emit(lane_key)
 
         if event.button == 1:
-            # Hitbox plus tolérante : on capte le clic même un peu en dessous du badge
+            # Expanded interaction area for reliable badge dragging
             if click_y < 50:
                 if getattr(event, "dblclick", False):
                     self.rename_requested.emit(lane_key)
@@ -127,7 +127,7 @@ class GelCanvas(FigureCanvasQTAgg):
         self.lane_names.clear()
         self.lane_names.update(rebuilt_names)
 
-        # On rafraîchit uniquement le visuel, sans lancer les lourds calculs de BioNexus
+        # Restrict execution to visual rendering to maintain performance during drag events
         self.plot_gel(
             self.current_image, 
             self.lanes, 
@@ -140,6 +140,7 @@ class GelCanvas(FigureCanvasQTAgg):
     def on_release(self, event):
         if self.selected_lane_idx is not None:
             self.selected_lane_idx = None
+            # Defer heavy calibration computations until the interaction cycle completes
             self.bands_modified.emit() 
 
     def plot_gel(self, image, lanes, raw_bands, annotated_bands, lane_names, marker_lane_x):
@@ -179,15 +180,14 @@ class GelCanvas(FigureCanvasQTAgg):
                 text_angle = 45
                 y_pos = -40
 
-            # Dynamic badge coloring
             if is_marker:
-                bg_color = "#FFD60A"  # Yellow for marker
+                bg_color = "#FFD60A"
                 text_color = "black"
             elif is_active:
-                bg_color = "#64D2FF"  # Cyan for selected lane
+                bg_color = "#64D2FF"
                 text_color = "black"
             else:
-                bg_color = "#3A3A3C"  # Dark gray default
+                bg_color = "#3A3A3C"
                 text_color = "white"
 
             self.ax.text(

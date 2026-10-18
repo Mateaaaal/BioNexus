@@ -1,13 +1,13 @@
 import numpy as np
 from scipy.signal import find_peaks
 
-
 def calculate_lane_density(
     lane_crop: np.ndarray,
     distance_threshold: int = 15,
     prominence: float = 10.0,
 ) -> tuple[np.ndarray, np.ndarray, list[float]]:
-    """Extract 1D intensity profile and calculate relative peak area percentages.
+    """
+    Extracts a 1D intensity profile and calculates relative peak area percentages.
 
     Args:
         lane_crop: 2D grayscale image array of the lane.
@@ -19,14 +19,11 @@ def calculate_lane_density(
         peaks: Indices of detected peak centers.
         percentages: Relative area percentages for each detected band.
     """
-    # Mean intensity across the lane width
     profile_raw = np.mean(lane_crop, axis=1)
 
-    # Invert grayscale so dark bands become positive peaks
     profile = 255.0 - profile_raw
     profile = profile - np.min(profile)
 
-    # Detect peak positions
     peaks, _ = find_peaks(
         profile, distance=distance_threshold, prominence=prominence
     )
@@ -34,7 +31,6 @@ def calculate_lane_density(
     if len(peaks) == 0:
         return profile, peaks, []
 
-    # Calculate area under curve for each peak
     half_width = distance_threshold // 2
     band_areas = []
 
